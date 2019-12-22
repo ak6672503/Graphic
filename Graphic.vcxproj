@@ -183,6 +183,7 @@
     </ResourceCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="CSettingDlg.h" />
     <ClInclude Include="framework.h" />
     <ClInclude Include="Graphic.h" />
     <ClInclude Include="GraphicDoc.h" />
@@ -193,6 +194,7 @@
     <ClInclude Include="targetver.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="CSettingDlg.cpp" />
     <ClCompile Include="Graphic.cpp" />
     <ClCompile Include="GraphicDoc.cpp" />
     <ClCompile Include="GraphicView.cpp" />

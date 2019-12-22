@@ -4,6 +4,7 @@
 
 #include "pch.h"
 #include "framework.h"
+#include "resource.h"
 // SHARED_HANDLERS 可以在实现预览、缩略图和搜索筛选器句柄的
 // ATL 项目中进行定义，并允许与该项目共享文档代码。
 #ifndef SHARED_HANDLERS
@@ -27,14 +28,22 @@ BEGIN_MESSAGE_MAP(CGraphicView, CView)
 	ON_COMMAND(ID_FILE_PRINT, &CView::OnFilePrint)
 	ON_COMMAND(ID_FILE_PRINT_DIRECT, &CView::OnFilePrint)
 	ON_COMMAND(ID_FILE_PRINT_PREVIEW, &CView::OnFilePrintPreview)
+	ON_COMMAND(IDM_DOT, &CGraphicView::OnDot)
+	ON_COMMAND(IDM_LINE, &CGraphicView::OnLine)
+	ON_COMMAND(IDM_RECTANGLE, &CGraphicView::OnRectangle)
+	ON_COMMAND(IDM_ELLIPSE, &CGraphicView::OnEllipse)
+	ON_WM_LBUTTONDOWN()
+	ON_WM_LBUTTONUP()
+	ON_COMMAND(IDM_SETTING, &CGraphicView::OnSetting)
 END_MESSAGE_MAP()
 
 // CGraphicView 构造/析构
 
 CGraphicView::CGraphicView() noexcept
 {
-	// TODO: 在此处添加构造代码
-
+	m_ptOrigin = 0;
+	m_nDrawType = 0;
+	m_nLineWidth = 0;
 }
 
 CGraphicView::~CGraphicView()
@@ -103,3 +112,95 @@ CGraphicDoc* CGraphicView::GetDocument() const // 非调试版本是内联的
 
 
 // CGraphicView 消息处理程序
+
+
+void CGraphicView::OnDot()
+{
+	m_nDrawType = 1;
+	m_nLineStyle = 0;
+
+}
+
+
+void CGraphicView::OnLine()
+{
+	// TODO: 在此添加命令处理程序代码
+	m_nDrawType = 2;
+
+}
+
+
+void CGraphicView::OnRectangle()
+{
+	m_nDrawType = 3;
+
+}
+
+
+void CGraphicView::OnEllipse()
+{
+	m_nDrawType = 4;
+
+}
+
+
+void CGraphicView::OnLButtonDown(UINT nFlags, CPoint point)
+{
+	m_ptOrigin = point;
+
+	CView::OnLButtonDown(nFlags, point);
+}
+
+
+void CGraphicView::OnLButtonUp(UINT nFlags, CPoint point)
+{
+
+	CClientDC dc(this);
+
+	CPen pen(m_nLineStyle, m_nLineWidth, RGB(255, 0, 0)); //修改画笔的颜色和宽度
+	CPen* oldPen = dc.SelectObject(&pen);//修改后要选用
+
+
+	CBrush* pBrush = CBrush::FromHandle((HBRUSH)GetStockObject(NULL_BRUSH));//设置画刷为透明
+	CBrush* POldBrush = dc.SelectObject(pBrush);
+
+	switch (m_nDrawType)
+	{
+	case 1:
+		dc.SetPixel(point, RGB(255, 0, 0));
+		break;
+
+	case 2:
+		dc.MoveTo(m_ptOrigin);
+		dc.LineTo(point);
+		break;
+
+	case 3:
+		dc.Rectangle(CRect(m_ptOrigin, point));
+		break;
+
+	case 4:
+		dc.Ellipse(CRect(m_ptOrigin, point));
+		break;
+	default:
+		break;
+	}
+	dc.SelectObject(oldPen);
+	dc.SelectObject(POldBrush);
+	CView::OnLButtonUp(nFlags, point);
+}
+
+
+void CGraphicView::OnSetting()
+{
+	CSettingDlg dlg; //通过新建的对话框添加新的类，然后用这个新的类为对象，
+	//在处理事件的时候弹出新的对话框
+	dlg.m_nLineWidth = m_nLineWidth;// 将视类保存的线宽数据传回给新打开的设置窗口，就不用每次都初始化
+
+	dlg.m_nLineStyle = m_nLineStyle; //跟上面的一样
+	if (IDOK == dlg.DoModal()) {
+		m_nLineWidth = dlg.m_nLineWidth;
+		m_nLineStyle = dlg.m_nLineStyle;
+	}
+
+}

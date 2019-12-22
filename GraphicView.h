@@ -3,8 +3,7 @@
 //
 
 #pragma once
-
-
+#include "CSettingDlg.h"
 class CGraphicView : public CView
 {
 protected: // 仅从序列化创建
@@ -40,6 +39,21 @@ protected:
 // 生成的消息映射函数
 protected:
 	DECLARE_MESSAGE_MAP()
+public:
+	afx_msg void OnDot();
+	afx_msg void OnLine();
+	afx_msg void OnRectangle();
+	afx_msg void OnEllipse();
+private:
+	UINT m_nDrawType;
+	CPoint m_ptOrigin;
+public:
+	afx_msg void OnLButtonDown(UINT nFlags, CPoint point);
+	afx_msg void OnLButtonUp(UINT nFlags, CPoint point);
+	afx_msg void OnSetting();
+private:
+	UINT m_nLineWidth;
+	int m_nLineStyle;
 };
 
 #ifndef _DEBUG  // GraphicView.cpp 中的调试版本
