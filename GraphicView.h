@@ -4,6 +4,7 @@
 
 #pragma once
 #include "CSettingDlg.h"
+
 class CGraphicView : public CView
 {
 protected: // 仅从序列化创建
@@ -54,6 +55,17 @@ public:
 private:
 	UINT m_nLineWidth;
 	int m_nLineStyle;
+public:
+	afx_msg void OnColor();
+private:
+	COLORREF m_clr;
+public:
+	afx_msg void OnFont();
+private:
+	CFont m_font;
+	CString m_strFontName;
+public:
+	afx_msg BOOL OnEraseBkgnd(CDC* pDC);
 };
 
 #ifndef _DEBUG  // GraphicView.cpp 中的调试版本

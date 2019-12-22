@@ -35,6 +35,9 @@ BEGIN_MESSAGE_MAP(CGraphicView, CView)
 	ON_WM_LBUTTONDOWN()
 	ON_WM_LBUTTONUP()
 	ON_COMMAND(IDM_SETTING, &CGraphicView::OnSetting)
+	ON_COMMAND(IDM_COLOR, &CGraphicView::OnColor)
+	ON_COMMAND(IDM_FONT, &CGraphicView::OnFont)
+	ON_WM_ERASEBKGND()
 END_MESSAGE_MAP()
 
 // CGraphicView 构造/析构
@@ -44,6 +47,9 @@ CGraphicView::CGraphicView() noexcept
 	m_ptOrigin = 0;
 	m_nDrawType = 0;
 	m_nLineWidth = 0;
+	m_clr = RGB(255, 0, 0);
+	m_strFontName = "";
+	
 }
 
 CGraphicView::~CGraphicView()
@@ -60,14 +66,17 @@ BOOL CGraphicView::PreCreateWindow(CREATESTRUCT& cs)
 
 // CGraphicView 绘图
 
-void CGraphicView::OnDraw(CDC* /*pDC*/)
+void CGraphicView::OnDraw(CDC* pDC)
 {
 	CGraphicDoc* pDoc = GetDocument();
 	ASSERT_VALID(pDoc);
 	if (!pDoc)
 		return;
 
-	// TODO: 在此处为本机数据添加绘制代码
+	CFont* pOldFont = pDC->SelectObject(&m_font);
+	pDC->TextOut(0, 0, m_strFontName);
+	pDC->SelectObject(pOldFont);
+
 }
 
 
@@ -157,7 +166,7 @@ void CGraphicView::OnLButtonUp(UINT nFlags, CPoint point)
 
 	CClientDC dc(this);
 
-	CPen pen(m_nLineStyle, m_nLineWidth, RGB(255, 0, 0)); //修改画笔的颜色和宽度
+	CPen pen(m_nLineStyle, m_nLineWidth, m_clr); //修改画笔的颜色和宽度
 	CPen* oldPen = dc.SelectObject(&pen);//修改后要选用
 
 
@@ -167,7 +176,7 @@ void CGraphicView::OnLButtonUp(UINT nFlags, CPoint point)
 	switch (m_nDrawType)
 	{
 	case 1:
-		dc.SetPixel(point, RGB(255, 0, 0));
+		dc.SetPixel(point,m_clr);
 		break;
 
 	case 2:
@@ -196,11 +205,62 @@ void CGraphicView::OnSetting()
 	CSettingDlg dlg; //通过新建的对话框添加新的类，然后用这个新的类为对象，
 	//在处理事件的时候弹出新的对话框
 	dlg.m_nLineWidth = m_nLineWidth;// 将视类保存的线宽数据传回给新打开的设置窗口，就不用每次都初始化
-
+	dlg.m_clr = m_clr;
 	dlg.m_nLineStyle = m_nLineStyle; //跟上面的一样
 	if (IDOK == dlg.DoModal()) {
 		m_nLineWidth = dlg.m_nLineWidth;
 		m_nLineStyle = dlg.m_nLineStyle;
 	}
 
+}
+
+
+void CGraphicView::OnColor()
+{
+	CColorDialog dlg;
+	dlg.m_cc.Flags |= CC_RGBINIT; //这里要设置回用户选定的默认颜色 不能像线条宽度那样的方法，
+	//这个类他有自己独特的标记符，所以需要用这种方式来保存用户的diy
+	if (IDOK == dlg.DoModal()) {
+		m_clr = dlg.m_cc.rgbResult;
+	}
+}
+
+
+void CGraphicView::OnFont()
+{
+	CFontDialog dlg;
+	if (IDOK == dlg.DoModal()) { 
+		//要先判断新建的字体对象有没有与别的字体关联，如果有关联的话就要先解绑
+		if(m_font.m_hObject){
+			m_font.DeleteObject();
+		m_font.CreateFontIndirect(dlg.m_cf.lpLogFont);
+		m_strFontName = dlg.m_cf.lpLogFont->lfFaceName;
+		Invalidate();
+		}
+	}
+
+}
+
+
+BOOL CGraphicView::OnEraseBkgnd(CDC* pDC)
+{
+	// TODO: 在此添加消息处理程序代码和/或调用默认值
+	CBitmap bitmap;
+	bitmap.LoadBitmap(IDB_BITMAP1);
+
+	BITMAP bmp;
+	bitmap.GetBitmap(&bmp);
+
+	CDC dcCompatible;
+	dcCompatible.CreateCompatibleDC(pDC);
+
+	dcCompatible.SelectObject(&bitmap);
+
+	CRect rect;
+	GetClientRect(&rect);
+	//pDC->BitBlt(0, 0, rect.Width(), rect.Height(), &dcCompatible, 0, 0, SRCCOPY);
+	
+	pDC->StretchBlt(0, 0, rect.Width(), rect.Height(), &dcCompatible, 0, 0,bmp.bmWidth,bmp.bmHeight, SRCCOPY);
+	//用这个方法实现的位图 可以拉伸
+	return TRUE;
 }
