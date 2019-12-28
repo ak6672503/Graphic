@@ -213,10 +213,7 @@
     <None Include="res\Graphic.rc2" />
   </ItemGroup>
   <ItemGroup>
-    <Image Include="..\..\..\Desktop\2222.png" />
-    <Image Include="..\..\..\Desktop\333.jpg" />
     <Image Include="res\bitmap1.bmp" />
-    <Image Include="res\bitmap2.bmp" />
     <Image Include="res\Graphic.ico" />
     <Image Include="res\GraphicDoc.ico" />
     <Image Include="res\Toolbar.bmp" />
