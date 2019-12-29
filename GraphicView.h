@@ -5,7 +5,7 @@
 #pragma once
 #include "CSettingDlg.h"
 
-class CGraphicView : public CView
+class CGraphicView : public CScrollView
 {
 protected: // 仅从序列化创建
 	CGraphicView() noexcept;
@@ -66,6 +66,18 @@ private:
 	CString m_strFontName;
 public:
 	afx_msg BOOL OnEraseBkgnd(CDC* pDC);
+private:
+	CPtrArray m_ptrArray;
+public:
+	afx_msg void OnPaint();
+	virtual void OnInitialUpdate();
+private:
+	CMetaFileDC m_dcMetaFile;
+public:
+	afx_msg void OnFileSave();
+	afx_msg void OnFileOpen();
+private:
+	CDC m_dcCompatible;
 };
 
 #ifndef _DEBUG  // GraphicView.cpp 中的调试版本

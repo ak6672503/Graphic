@@ -17,17 +17,18 @@
 #ifdef _DEBUG
 #define new DEBUG_NEW
 #endif
+#include "CGraph.h"
 
 
 // CGraphicView
 
-IMPLEMENT_DYNCREATE(CGraphicView, CView)
+IMPLEMENT_DYNCREATE(CGraphicView, CScrollView)
 
-BEGIN_MESSAGE_MAP(CGraphicView, CView)
+BEGIN_MESSAGE_MAP(CGraphicView, CScrollView)
 	// 标准打印命令
-	ON_COMMAND(ID_FILE_PRINT, &CView::OnFilePrint)
-	ON_COMMAND(ID_FILE_PRINT_DIRECT, &CView::OnFilePrint)
-	ON_COMMAND(ID_FILE_PRINT_PREVIEW, &CView::OnFilePrintPreview)
+	ON_COMMAND(ID_FILE_PRINT, &CScrollView::OnFilePrint)
+	ON_COMMAND(ID_FILE_PRINT_DIRECT, &CScrollView::OnFilePrint)
+	ON_COMMAND(ID_FILE_PRINT_PREVIEW, &CScrollView::OnFilePrintPreview)
 	ON_COMMAND(IDM_DOT, &CGraphicView::OnDot)
 	ON_COMMAND(IDM_LINE, &CGraphicView::OnLine)
 	ON_COMMAND(IDM_RECTANGLE, &CGraphicView::OnRectangle)
@@ -38,6 +39,9 @@ BEGIN_MESSAGE_MAP(CGraphicView, CView)
 	ON_COMMAND(IDM_COLOR, &CGraphicView::OnColor)
 	ON_COMMAND(IDM_FONT, &CGraphicView::OnFont)
 	ON_WM_ERASEBKGND()
+	ON_WM_PAINT()
+	ON_COMMAND(ID_FILE_SAVE, &CGraphicView::OnFileSave)
+	ON_COMMAND(ID_FILE_OPEN, &CGraphicView::OnFileOpen)
 END_MESSAGE_MAP()
 
 // CGraphicView 构造/析构
@@ -50,10 +54,14 @@ CGraphicView::CGraphicView() noexcept
 	m_clr = RGB(255, 0, 0);
 	m_strFontName = "";
 	
+	m_dcMetaFile.CreateEnhanced(NULL, NULL, NULL, NULL);
 }
 
 CGraphicView::~CGraphicView()
 {
+	for (int i = 0; i < m_ptrArray.GetSize(); i++) {
+		delete m_ptrArray.GetAt(i);
+	}
 }
 
 BOOL CGraphicView::PreCreateWindow(CREATESTRUCT& cs)
@@ -61,7 +69,7 @@ BOOL CGraphicView::PreCreateWindow(CREATESTRUCT& cs)
 	// TODO: 在此处通过修改
 	//  CREATESTRUCT cs 来修改窗口类或样式
 
-	return CView::PreCreateWindow(cs);
+	return CScrollView::PreCreateWindow(cs);
 }
 
 // CGraphicView 绘图
@@ -72,11 +80,52 @@ void CGraphicView::OnDraw(CDC* pDC)
 	ASSERT_VALID(pDoc);
 	if (!pDoc)
 		return;
-
+	/*
 	CFont* pOldFont = pDC->SelectObject(&m_font);
 	pDC->TextOut(0, 0, m_strFontName);
-	pDC->SelectObject(pOldFont);
+	*/
+	/*CBrush* pBrush = CBrush::FromHandle((HBRUSH)GetStockObject(NULL_BRUSH));
+	CBrush* pOldBrush = pDC->SelectObject(pBrush);
 
+	for (int i = 0; i < m_ptrArray.GetSize(); i++) {
+		switch (((CGraph*)m_ptrArray.GetAt(i))->m_nDrawType)
+		{
+		case 1:
+			pDC->SetPixel(((CGraph*)m_ptrArray.GetAt(i))->m_ptEnd, RGB(0, 0, 0));
+			break;
+
+		case 2:
+			pDC->MoveTo(((CGraph*)m_ptrArray.GetAt(i))->m_ptOrign);
+			pDC->LineTo(((CGraph*)m_ptrArray.GetAt(i))->m_ptEnd);
+			break;
+		case 3:
+			pDC->Rectangle(CRect(((CGraph*)m_ptrArray.GetAt(i))->m_ptOrign, ((CGraph*)m_ptrArray.GetAt(i))->m_ptEnd));
+			break;
+		case 4:
+			pDC->Ellipse(CRect(((CGraph*)m_ptrArray.GetAt(i))->m_ptOrign, ((CGraph*)m_ptrArray.GetAt(i))->m_ptEnd));
+			break;
+		}
+	}
+	pDC->SelectObject(pOldBrush);
+	*/
+
+	//HENHMETAFILE hmetaFile;
+	//hmetaFile = m_dcMetaFile.CloseEnhanced();
+
+	CRect rect;
+	GetClientRect(&rect);
+	pDC->BitBlt(0, 0, rect.Width(), rect.Height(), &m_dcCompatible, 0, 0, SRCCOPY);
+	/*
+	rect.left = rect.right / 4;
+	rect.right = 3 * rect.right / 4;
+	rect.top = rect.bottom / 4;
+	rect.bottom = 3 * rect.bottom / 4;
+
+	pDC->PlayMetaFile(hmetaFile, &rect);
+	m_dcMetaFile.CreateEnhanced(NULL, NULL, NULL, NULL);
+	m_dcMetaFile.PlayMetaFile(hmetaFile, &rect);
+	DeleteEnhMetaFile(hmetaFile);
+	*/
 }
 
 
@@ -104,12 +153,12 @@ void CGraphicView::OnEndPrinting(CDC* /*pDC*/, CPrintInfo* /*pInfo*/)
 #ifdef _DEBUG
 void CGraphicView::AssertValid() const
 {
-	CView::AssertValid();
+	CScrollView::AssertValid();
 }
 
 void CGraphicView::Dump(CDumpContext& dc) const
 {
-	CView::Dump(dc);
+	CScrollView::Dump(dc);
 }
 
 CGraphicDoc* CGraphicView::GetDocument() const // 非调试版本是内联的
@@ -157,7 +206,7 @@ void CGraphicView::OnLButtonDown(UINT nFlags, CPoint point)
 {
 	m_ptOrigin = point;
 
-	CView::OnLButtonDown(nFlags, point);
+	CScrollView::OnLButtonDown(nFlags, point);
 }
 
 
@@ -166,37 +215,63 @@ void CGraphicView::OnLButtonUp(UINT nFlags, CPoint point)
 
 	CClientDC dc(this);
 
-	CPen pen(m_nLineStyle, m_nLineWidth, m_clr); //修改画笔的颜色和宽度
-	CPen* oldPen = dc.SelectObject(&pen);//修改后要选用
-
+	//CPen pen(m_nLineStyle, m_nLineWidth, m_clr); //修改画笔的颜色和宽度
+	//CPen* oldPen = dc.SelectObject(&pen);//修改后要选用
+	//m_dcMetaFile.SelectObject(&pen);
 
 	CBrush* pBrush = CBrush::FromHandle((HBRUSH)GetStockObject(NULL_BRUSH));//设置画刷为透明
-	CBrush* POldBrush = dc.SelectObject(pBrush);
+	//CBrush* POldBrush = dc.SelectObject(pBrush);
+	//m_dcMetaFile.SelectObject(pBrush);
+
+	if (!m_dcCompatible.m_hDC) {
+		m_dcCompatible.CreateCompatibleDC(&dc);
+		CRect rect;
+		GetClientRect(&rect);
+		CBitmap bitmap;
+		bitmap.CreateCompatibleBitmap(&dc, rect.Width(), rect.Height());
+		m_dcCompatible.SelectObject(&bitmap);
+		m_dcCompatible.BitBlt(0, 0, rect.Width(), rect.Height(), &dc, 0, 0, SRCCOPY);
+		m_dcCompatible.SelectObject(pBrush);
+	
+	}
 
 	switch (m_nDrawType)
 	{
 	case 1:
-		dc.SetPixel(point,m_clr);
+		m_dcCompatible.SetPixel(point,m_clr);
 		break;
 
 	case 2:
-		dc.MoveTo(m_ptOrigin);
-		dc.LineTo(point);
+		m_dcCompatible.MoveTo(m_ptOrigin);
+		m_dcCompatible.LineTo(point);
 		break;
 
 	case 3:
-		dc.Rectangle(CRect(m_ptOrigin, point));
+		m_dcCompatible.Rectangle(CRect(m_ptOrigin, point));
 		break;
 
 	case 4:
-		dc.Ellipse(CRect(m_ptOrigin, point));
+		m_dcCompatible.Ellipse(CRect(m_ptOrigin, point));
 		break;
-	default:
-		break;
+	
 	}
-	dc.SelectObject(oldPen);
-	dc.SelectObject(POldBrush);
-	CView::OnLButtonUp(nFlags, point);
+	//dc.SelectObject(oldPen);
+	//dc.SelectObject(POldBrush);
+	/* 这样定义会存在析构，然后数据丢失，并没有保存到图形
+	CGraph graph(m_nDrawType, m_ptOrigin, point);
+	m_ptrArray.Add(&graph); */
+
+	//这样做就是直接绑定 数据本身的地址，就算析构了也能找到该数据
+	//CGraph* pGraph = new CGraph(m_nDrawType, m_ptOrigin, point);
+//	m_ptrArray.Add(pGraph);
+
+	//OnPrepareDC(&dc);
+	//dc.DPtoLP(&m_ptOrigin);
+	//dc.DPtoLP(&point);
+	//CGraph* pGraph = new CGraph(m_nDrawType, m_ptOrigin, point);
+	//	m_ptrArray.Add(pGraph);
+
+	CScrollView::OnLButtonUp(nFlags, point);
 }
 
 
@@ -245,7 +320,7 @@ void CGraphicView::OnFont()
 BOOL CGraphicView::OnEraseBkgnd(CDC* pDC)
 {
 	// TODO: 在此添加消息处理程序代码和/或调用默认值
-	CBitmap bitmap;
+	/*CBitmap bitmap;
 	bitmap.LoadBitmap(IDB_BITMAP1);
 
 	BITMAP bmp;
@@ -261,6 +336,58 @@ BOOL CGraphicView::OnEraseBkgnd(CDC* pDC)
 	//pDC->BitBlt(0, 0, rect.Width(), rect.Height(), &dcCompatible, 0, 0, SRCCOPY);
 	
 	pDC->StretchBlt(0, 0, rect.Width(), rect.Height(), &dcCompatible, 0, 0,bmp.bmWidth,bmp.bmHeight, SRCCOPY);
-	//用这个方法实现的位图 可以拉伸
+	//用这个方法实现的位图 可以拉伸*/
 	return TRUE;
+}
+
+
+void CGraphicView::OnPaint()
+{
+	CPaintDC dc(this); // device context for painting
+					   // TODO: 在此处添加消息处理程序代码
+					   // 不为绘图消息调用 CScrollView::OnPaint()
+
+	OnPrepareDC(&dc);
+	OnDraw(&dc);
+}
+
+
+void CGraphicView::OnInitialUpdate()
+{
+	CScrollView::OnInitialUpdate();
+
+	SetScrollSizes(MM_TEXT, CSize(3000,3000));
+	// TODO: 在此添加专用代码和/或调用基类
+}
+
+
+void CGraphicView::OnFileSave()
+{
+	HENHMETAFILE hmetaFile;
+	hmetaFile = m_dcMetaFile.CloseEnhanced();
+	HENHMETAFILE hemfCopy = CopyEnhMetaFile(hmetaFile, L"meta.emf");
+	m_dcMetaFile.CreateEnhanced(NULL, NULL, NULL, NULL);
+	DeleteEnhMetaFile(hmetaFile);
+	DeleteEnhMetaFile(hemfCopy);
+
+
+}
+
+
+void CGraphicView::OnFileOpen()
+{
+
+	CRect rect;
+	GetClientRect(&rect);
+	rect.left = rect.right / 4;
+	rect.right = 3 * rect.right / 4;
+	rect.top = rect.bottom / 4;
+	rect.bottom = 3 * rect.bottom / 4;
+
+	HENHMETAFILE hmetaFile;
+	hmetaFile = GetEnhMetaFile(L"meta.emf");
+	m_dcMetaFile.PlayMetaFile(hmetaFile, &rect);
+	DeleteEnhMetaFile(hmetaFile);
+	Invalidate();
+
 }
