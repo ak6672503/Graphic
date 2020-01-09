@@ -74,10 +74,13 @@ public:
 private:
 	CMetaFileDC m_dcMetaFile;
 public:
-	afx_msg void OnFileSave();
-	afx_msg void OnFileOpen();
+//	afx_msg void OnFileSave();
+//	afx_msg void OnFileOpen();
 private:
 	CDC m_dcCompatible;
+public:
+	afx_msg void OnFileRead();
+	afx_msg void OnFileWrite();
 };
 
 #ifndef _DEBUG  // GraphicView.cpp 中的调试版本

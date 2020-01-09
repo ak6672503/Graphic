@@ -40,8 +40,10 @@ BEGIN_MESSAGE_MAP(CGraphicView, CScrollView)
 	ON_COMMAND(IDM_FONT, &CGraphicView::OnFont)
 	ON_WM_ERASEBKGND()
 	ON_WM_PAINT()
-	ON_COMMAND(ID_FILE_SAVE, &CGraphicView::OnFileSave)
-	ON_COMMAND(ID_FILE_OPEN, &CGraphicView::OnFileOpen)
+//	ON_COMMAND(ID_FILE_SAVE, &CGraphicView::OnFileSave)
+//	ON_COMMAND(ID_FILE_OPEN, &CGraphicView::OnFileOpen)
+	ON_COMMAND(IDM_FILE_READ, &CGraphicView::OnFileRead)
+	ON_COMMAND(IDM_FILE_WRITE, &CGraphicView::OnFileWrite)
 END_MESSAGE_MAP()
 
 // CGraphicView 构造/析构
@@ -361,33 +363,69 @@ void CGraphicView::OnInitialUpdate()
 }
 
 
-void CGraphicView::OnFileSave()
-{
-	HENHMETAFILE hmetaFile;
-	hmetaFile = m_dcMetaFile.CloseEnhanced();
-	HENHMETAFILE hemfCopy = CopyEnhMetaFile(hmetaFile, L"meta.emf");
-	m_dcMetaFile.CreateEnhanced(NULL, NULL, NULL, NULL);
-	DeleteEnhMetaFile(hmetaFile);
-	DeleteEnhMetaFile(hemfCopy);
+//void CGraphicView::OnFileSave()
+//{
+//	HENHMETAFILE hmetaFile;
+//	hmetaFile = m_dcMetaFile.CloseEnhanced();
+//	HENHMETAFILE hemfCopy = CopyEnhMetaFile(hmetaFile, L"meta.emf");
+//	m_dcMetaFile.CreateEnhanced(NULL, NULL, NULL, NULL);
+//	DeleteEnhMetaFile(hmetaFile);
+//	DeleteEnhMetaFile(hemfCopy);
+//
+//
+//}
 
+
+//void CGraphicView::OnFileOpen()
+//{
+//
+//	CRect rect;
+//	GetClientRect(&rect);
+//	rect.left = rect.right / 4;
+//	rect.right = 3 * rect.right / 4;
+//	rect.top = rect.bottom / 4;
+//	rect.bottom = 3 * rect.bottom / 4;
+//
+//	HENHMETAFILE hmetaFile;
+//	hmetaFile = GetEnhMetaFile(L"meta.emf");
+//	m_dcMetaFile.PlayMetaFile(hmetaFile, &rect);
+//	DeleteEnhMetaFile(hmetaFile);
+//	Invalidate();
+//
+//}
+
+
+void CGraphicView::OnFileRead()
+{
+//构造cfile文件对象
+	CFile file(L"1.txt", CFile::modeRead);
+	//构造存档对象
+	CArchive ar(&file, CArchive::load);
+	int i;
+	char ch;
+	float f;
+	CString str;
+	CString strResult;
+
+	//读取数据
+	ar >> i >> ch >> f >> str;
+	strResult.Format(L"%d,%c,%f,%s", i, ch, f, str);
+	MessageBox(strResult);
 
 }
 
 
-void CGraphicView::OnFileOpen()
+void CGraphicView::OnFileWrite()
 {
+//构造CFile文件对象
+	CFile file(L"1.txt", CFile::modeCreate | CFile::modeWrite);
 
-	CRect rect;
-	GetClientRect(&rect);
-	rect.left = rect.right / 4;
-	rect.right = 3 * rect.right / 4;
-	rect.top = rect.bottom / 4;
-	rect.bottom = 3 * rect.bottom / 4;
+	CArchive ar(&file, CArchive::store);
 
-	HENHMETAFILE hmetaFile;
-	hmetaFile = GetEnhMetaFile(L"meta.emf");
-	m_dcMetaFile.PlayMetaFile(hmetaFile, &rect);
-	DeleteEnhMetaFile(hmetaFile);
-	Invalidate();
-
+	int i = 4;
+	char ch = 'a';
+	float f = 1.3f;
+	CString str("www.baidu.com");
+	//保存数据
+	ar << i << ch <<f<< str;
 }
